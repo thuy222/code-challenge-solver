@@ -1,0 +1,20 @@
+{
+  "name": "problem4-sum-to-n",
+  "version": "1.0.0",
+  "description": "Three unique TypeScript implementations of sum_to_n(n).",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node --experimental-strip-types src/index.ts",
+    "dev": "node --experimental-strip-types --watch src/index.ts",
+    "test": "node --experimental-strip-types --test src/sum_to_n.test.ts",
+    "typecheck": "tsc"
+  },
+  "engines": {
+    "node": ">=22.6.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0",
+    "@types/node": "^22.0.0"
+  }
+}
