@@ -1,0 +1,15 @@
+sequenceDiagram
+  autonumber
+  participant C as Client
+  participant API as API Service
+  participant PS as Redis Pub/Sub
+
+  C->>API: GET /scoreboard/stream (SSE)<br/>Authorization: Bearer <jwt>
+  API-->>C: event: snapshot / data: {top}
+  API->>PS: SUBSCRIBE pubsub:scoreboard
+  loop while connected
+    PS-->>API: message {top, generatedAt}
+    API-->>C: event: update / data: {top, generatedAt}
+    Note over API,C: every 60 s
+    API-->>C: event: snapshot (keep-alive)
+  end

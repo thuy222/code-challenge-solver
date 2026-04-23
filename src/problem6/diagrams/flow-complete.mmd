@@ -1,0 +1,33 @@
+sequenceDiagram
+  autonumber
+  participant C as Client (Web)
+  participant API as API Service
+  participant PG as Postgres
+  participant R as Redis
+  participant PS as Pub/Sub
+  participant S as SSE Handlers<br/>(all API pods)
+
+  C->>API: POST /actions/start {actionType}<br/>Authorization: Bearer <jwt>
+  API->>PG: lookup action_types[type] (enabled? delta? cooldown?)
+  API->>R: check ratelimit:start + cooldown
+  API->>R: SET action_token:{jti} = {userId,actionId,type} EX 300
+  API-->>C: 200 {actionToken, expiresAt}
+
+  Note over C: User performs the action<br/>(not our concern)
+
+  C->>API: POST /actions/complete {actionToken}
+  API->>API: verify JWT signature + exp
+  API->>API: assert jwt.sub == authenticated userId
+  API->>R: GETDEL action_token:{jti}
+  alt token missing / already consumed
+    API-->>C: 404 ACTION_NOT_FOUND
+  end
+  API->>PG: BEGIN<br/>INSERT score_events (unique on action_id)<br/>UPDATE user_scores SET score = score + delta<br/>COMMIT
+  API->>R: ZADD scoreboard:top score userId
+  API->>R: ZREVRANGE 0 9 (new top 10)
+  alt top 10 changed
+    API->>PS: PUBLISH pubsub:scoreboard {top, generatedAt}
+    PS-->>S: fan-out
+    S-->>C: event: update / data: {top, generatedAt}
+  end
+  API-->>C: 200 {userId, score, delta, rank}

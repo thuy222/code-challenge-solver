@@ -1,0 +1,23 @@
+flowchart LR
+  Client[Browser]
+
+  subgraph APIPod[API Service - horizontally scaled]
+    direction TB
+    Routes[Express Router]
+    Ctrl[scoreboard.controller]
+    Svc[scoreboard.service]
+    Repo[scoreboard.repository]
+    Sse[sse.handler]
+  end
+
+  PG[(Postgres<br/>user_scores<br/>score_events<br/>action_types)]
+  Redis[(Redis<br/>ZSET top<br/>action tokens<br/>rate limits<br/>pub-sub)]
+
+  Client -->|POST /actions/*| Routes
+  Client -->|GET /scoreboard/top| Routes
+  Client -. SSE .-> Sse
+  Routes --> Ctrl --> Svc --> Repo
+  Repo --> PG
+  Svc --> Redis
+  Svc -- publish --> Redis
+  Sse -- subscribe --> Redis
